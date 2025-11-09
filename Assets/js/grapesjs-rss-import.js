@@ -48,20 +48,47 @@
             }
         });
 
+        // Define a custom component type for RSS import placeholder
+        editor.DomComponents.addType('rss-import-placeholder', {
+            model: {
+                defaults: {
+                    tagName: 'div',
+                    draggable: true,
+                    droppable: false,
+                    removable: true,
+                    copyable: false,
+                    attributes: { 'data-rss-placeholder': 'true' },
+                    content: '<p style="text-align: center; padding: 20px; background: #f0f0f0; border: 2px dashed #ccc;">Loading RSS Feed...</p>',
+                }
+            }
+        });
+
+        // Track if modal is already open to prevent duplicates
+        let isModalOpen = false;
+        let currentPlaceholder = null;
+
+        // Listen for component added event
+        editor.on('component:add', function(component) {
+            // Check if it's our RSS placeholder
+            if (component.get('type') === 'rss-import-placeholder' && !isModalOpen) {
+                isModalOpen = true;
+                currentPlaceholder = component;
+
+                // Small delay to ensure component is properly added to canvas
+                setTimeout(function() {
+                    editor.runCommand('rss-import');
+                }, 100);
+            }
+        });
+
         // Add block to blocks panel (left sidebar)
         editor.BlockManager.add('rss-import-block', {
             label: 'RSS Feed',
             category: 'Extra',
-            content: '',
+            content: { type: 'rss-import-placeholder' },
             media: '<i class="fa fa-rss" style="font-size: 32px; color: #ff6600;"></i>',
-            activate: true,
-            select: true,
             attributes: {
-                title: 'Import RSS Feed Items'
-            },
-            // When block is clicked or dragged, open the RSS modal
-            onClick: function() {
-                editor.runCommand('rss-import');
+                title: 'Drag to import RSS Feed Items'
             }
         });
 
@@ -72,7 +99,7 @@
                     <div class="modal-dialog modal-lg" style="z-index: 10001;">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <button type="button" class="close" onclick="document.getElementById('rss-import-modal').remove()">
+                                <button type="button" class="close" id="loading-modal-close-btn">
                                     <span>&times;</span>
                                 </button>
                                 <h4 class="modal-title">RSS Feed Import</h4>
@@ -91,6 +118,14 @@
             const modalContainer = document.createElement('div');
             modalContainer.innerHTML = modalHtml;
             document.body.appendChild(modalContainer.firstElementChild);
+
+            // Attach event listener for close button
+            setTimeout(function() {
+                const closeBtn = document.getElementById('loading-modal-close-btn');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', closeModal);
+                }
+            }, 0);
         }
 
         function showRssModal(items, editor) {
@@ -129,7 +164,7 @@
                     <div class="modal-dialog modal-lg" style="z-index: 10001;">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <button type="button" class="close" onclick="document.getElementById('rss-import-modal').remove()">
+                                <button type="button" class="close" id="modal-close-btn">
                                     <span>&times;</span>
                                 </button>
                                 <h4 class="modal-title">Select RSS Items to Import</h4>
@@ -144,7 +179,7 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-default" onclick="document.getElementById('rss-import-modal').remove()">Cancel</button>
+                                <button type="button" class="btn btn-default" id="modal-cancel-btn">Cancel</button>
                                 <button type="button" class="btn btn-primary" id="insert-rss-items">Insert Selected Items</button>
                             </div>
                         </div>
@@ -152,11 +187,19 @@
                 </div>
             `;
 
-            closeModal();
+            // Remove any existing modal first
+            const existingModal = document.getElementById('rss-import-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
 
             const modalContainer = document.createElement('div');
             modalContainer.innerHTML = modalHtml;
             document.body.appendChild(modalContainer.firstElementChild);
+
+            // Attach event listeners
+            document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+            document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
 
             document.getElementById('select-all-items').addEventListener('click', function() {
                 document.querySelectorAll('.rss-item-checkbox').forEach(function(cb) {
@@ -205,9 +248,23 @@
 
             // Insert content into GrapesJS editor
             try {
-                const wrapper = editor.getWrapper();
-                editor.addComponents(htmlContent, { at: wrapper.components().length });
-                console.log('RSS content inserted successfully');
+                if (currentPlaceholder && currentPlaceholder.parent()) {
+                    // Get the parent and index of placeholder
+                    const parent = currentPlaceholder.parent();
+                    const index = parent.components().indexOf(currentPlaceholder);
+
+                    // Remove placeholder
+                    currentPlaceholder.remove();
+
+                    // Add new content at the same position
+                    parent.append(htmlContent, { at: index });
+                    console.log('RSS content inserted successfully at placeholder position');
+                } else {
+                    // Fallback: insert at end if placeholder not found
+                    const wrapper = editor.getWrapper();
+                    editor.addComponents(htmlContent, { at: wrapper.components().length });
+                    console.log('RSS content inserted successfully');
+                }
             } catch (error) {
                 console.error('Error inserting content:', error);
                 alert('Error inserting content: ' + error.message);
@@ -221,6 +278,15 @@
             if (modal) {
                 modal.remove();
             }
+
+            // If modal is closed without selecting items, remove the placeholder
+            if (currentPlaceholder && currentPlaceholder.parent()) {
+                currentPlaceholder.remove();
+            }
+
+            // Reset state
+            isModalOpen = false;
+            currentPlaceholder = null;
         }
     };
 
