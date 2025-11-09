@@ -17,7 +17,8 @@ class AssetSubscriber implements EventSubscriberInterface
 
     public function injectAssets(CustomAssetsEvent $event): void
     {
-        $event->addScript('plugins/MauticEmailRssImportBundle/Assets/js/rss-import.js', 'bodyClose');
+        // Load in head section so it's available before GrapesJS builder initializes
+        $event->addScript('plugins/MauticEmailRssImportBundle/Assets/js/grapesjs-rss-import.js');
         $event->addStylesheet('plugins/MauticEmailRssImportBundle/Assets/css/rss-import.css');
     }
 }
