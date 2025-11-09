@@ -1,0 +1,35 @@
+{
+    "name": "mautic/email-rss-import-bundle",
+    "description": "Import RSS feed items into Mautic email builder with customizable MJML templates",
+    "type": "mautic-plugin",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Frederik Wouters",
+            "email": "woutersf@gmail.com"
+        }
+    ],
+    "keywords": [
+        "mautic",
+        "plugin",
+        "rss",
+        "email",
+        "grapesjs",
+        "mjml",
+        "feed",
+        "import"
+    ],
+    "require": {
+        "php": "^7.4|^8.0",
+        "mautic/core": "^4.0|^5.0",
+        "ext-simplexml": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "MauticPlugin\\MauticEmailRssImportBundle\\": ""
+        }
+    },
+    "extra": {
+        "install-directory-name": "MauticEmailRssImportBundle"
+    }
+}

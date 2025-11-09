@@ -30,6 +30,24 @@ Select the RSS items you want to import into your email:
 
 ## Installation
 
+### Option 1: Composer (Recommended)
+
+1. Add the plugin to your Mautic installation:
+   ```bash
+   composer require mautic/email-rss-import-bundle
+   ```
+
+2. Clear the Mautic cache:
+   ```bash
+   php bin/console cache:clear
+   ```
+
+3. Navigate to Mautic Settings → Plugins
+4. Click "Install/Upgrade Plugins"
+5. Find "Email RSS Import" and click to configure it
+
+### Option 2: Manual Installation
+
 1. Clone or download this repository into your Mautic plugins directory:
    ```bash
    cd /path/to/mautic/plugins
@@ -44,6 +62,30 @@ Select the RSS items you want to import into your email:
 3. Navigate to Mautic Settings → Plugins
 4. Click "Install/Upgrade Plugins"
 5. Find "Email RSS Import" and click to configure it
+
+### Option 3: Private Repository
+
+If you're hosting this plugin in a private repository, add it to your `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/your-username/mautic-email-rss-import-bundle.git"
+        }
+    ],
+    "require": {
+        "mautic/email-rss-import-bundle": "^1.0"
+    }
+}
+```
+
+Then run:
+```bash
+composer update mautic/email-rss-import-bundle
+php bin/console cache:clear
+```
 
 ## Configuration
 
@@ -221,6 +263,46 @@ This plugin is provided as-is for use with Mautic installations.
 
 For issues, questions, or contributions, please open an issue in the repository.
 
+## Publishing to Packagist
+
+To make this plugin available via Composer for everyone:
+
+1. **Push to GitHub** (or GitLab/Bitbucket):
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial release v1.0.0"
+   git tag v1.0.0
+   git remote add origin https://github.com/your-username/mautic-email-rss-import-bundle.git
+   git push -u origin main
+   git push --tags
+   ```
+
+2. **Submit to Packagist**:
+   - Go to https://packagist.org
+   - Sign in with your GitHub account
+   - Click "Submit"
+   - Enter your repository URL: `https://github.com/your-username/mautic-email-rss-import-bundle`
+   - Packagist will automatically track new releases via your Git tags
+
+3. **Auto-Update Hook** (Optional):
+   - In your GitHub repository settings, add Packagist webhook for automatic updates
+   - Settings → Webhooks → Add webhook
+   - Payload URL: `https://packagist.org/api/github?username=YOUR_USERNAME`
+
+## Version Tagging
+
+When releasing new versions:
+```bash
+# Update composer.json version if needed
+git add .
+git commit -m "Release v1.1.0"
+git tag v1.1.0
+git push && git push --tags
+```
+
+Packagist will automatically detect the new tag and update the package.
+
 ## Changelog
 
 ### Version 1.0.0
@@ -230,3 +312,5 @@ For issues, questions, or contributions, please open an issue in the repository.
 - MJML template support with token replacement
 - Multi-item selection
 - Configuration interface
+- Drag-and-drop block functionality
+- Composer support
