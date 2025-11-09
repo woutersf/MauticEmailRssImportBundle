@@ -18,7 +18,11 @@
                 showLoadingModal();
 
                 try {
-                    const response = await fetch(mauticBaseUrl + '/s/emailrssimport/fetch', {
+                    // Use absolute path from root or construct with window.location.origin
+                    const fetchUrl = window.location.origin + '/s/emailrssimport/fetch';
+                    console.log('RSS Import: Fetching from:', fetchUrl);
+
+                    const response = await fetch(fetchUrl, {
                         method: 'GET',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
