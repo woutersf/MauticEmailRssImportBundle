@@ -88,19 +88,17 @@ class EmailRssImportIntegration extends AbstractIntegration
             // HTML Template textarea
             $defaultTemplate = '<mj-section background-color="#ffffff" padding-top="25px" padding-bottom="0">
       <mj-column width="100%">
-        <mj-image src="{media}" alt="Lake of Brienz - Switzerland" padding-top="0" padding-bottom="20px">
-        </mj-image>
+        <mj-image src="{media}" alt="{title}" padding-top="0" padding-bottom="20px"></mj-image>
         <mj-text color="#000000" font-family="Ubuntu, Helvetica, Arial, sans-serif" font-size="20px" line-height="1.5" font-weight="500" padding-bottom="0px">
-          <p>{title}
-          </p>
+          <p>{title}</p>
         </mj-text>
         <mj-text color="#000000" font-family="Ubuntu, Helvetica, Arial, sans-serif" font-size="16px" line-height="1.5" font-weight="300" align="justify">
-          <p>{description}
-          </p>
+          <p>{description}</p>
         </mj-text>
-        <mj-button background-color="#486AE2" color="#FFFFFF" href="#" font-family="Ubuntu, Helvetica, Arial, sans-serif" padding-top="20px" padding-bottom="40px">READ MORE
-        </mj-button>
-        {category} - {pubDate}
+        <mj-button background-color="#486AE2" color="#FFFFFF" href="{link}" font-family="Ubuntu, Helvetica, Arial, sans-serif" padding-top="20px" padding-bottom="40px">READ MORE</mj-button>
+        <mj-text color="#666666" font-family="Ubuntu, Helvetica, Arial, sans-serif" font-size="12px">
+          <p>{category} - {pubDate}</p>
+        </mj-text>
       </mj-column>
     </mj-section>';
 
