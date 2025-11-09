@@ -1,0 +1,55 @@
+/* RSS Import Plugin Styles */
+
+#rss-import-button {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    color: #333;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+#rss-import-button:hover {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+}
+
+#rss-import-button i {
+    margin-right: 5px;
+    color: #ff6600;
+}
+
+.rss-item {
+    transition: all 0.2s ease;
+}
+
+.rss-item:hover {
+    background-color: #f9f9f9;
+}
+
+.rss-item-checkbox {
+    cursor: pointer;
+}
+
+#rss-import-modal .modal-backdrop {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1040;
+    background-color: #000;
+    opacity: 0.5;
+}
+
+#rss-import-modal .modal-dialog {
+    position: relative;
+    z-index: 1050;
+    margin: 30px auto;
+}
+
+#rss-items-list {
+    margin-top: 15px;
+}
