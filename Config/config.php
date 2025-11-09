@@ -7,6 +7,7 @@ return [
     'description' => 'Import RSS feed items into email editor with customizable templates',
     'version'     => '1.0.0',
     'author'      => 'Frederik Wouters',
+    'icon'        => 'plugins/MauticEmailRssImportBundle/Assets/img/rss-icon.png',
 
     'routes' => [
         'main' => [

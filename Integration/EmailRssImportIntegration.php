@@ -26,6 +26,14 @@ class EmailRssImportIntegration extends AbstractIntegration
     }
 
     /**
+     * Get the path to the integration icon
+     */
+    public function getIcon(): string
+    {
+        return 'plugins/MauticEmailRssImportBundle/Assets/img/rss-icon.png';
+    }
+
+    /**
      * Return array of key => label elements that will be converted to inputs to
      * obtain from the user.
      *
@@ -44,18 +52,6 @@ class EmailRssImportIntegration extends AbstractIntegration
     public function appendToForm(&$builder, $data, $formArea): void
     {
         if ('keys' === $formArea) {
-            // Active checkbox
-            $builder->add(
-                'active',
-                YesNoButtonGroupType::class,
-                [
-                    'label' => 'mautic.plugin.emailrssimport.active',
-                    'data'  => isset($data['active']) && (bool) $data['active'],
-                    'attr'  => [
-                        'tooltip' => 'mautic.plugin.emailrssimport.active.tooltip',
-                    ],
-                ]
-            );
 
             // RSS URL field
             $builder->add(
