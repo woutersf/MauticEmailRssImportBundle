@@ -53,18 +53,22 @@ class EmailRssImportIntegration extends AbstractIntegration
     {
         if ('keys' === $formArea) {
 
-            // RSS URL field
+            // RSS Feeds textarea - supports multiple feeds
+            $defaultFeeds = "BBC News|https://feeds.bbci.co.uk/news/rss.xml\nTechCrunch|https://techcrunch.com/feed/";
             $builder->add(
-                'rss_url',
-                UrlType::class,
+                'rss_feeds',
+                TextareaType::class,
                 [
-                    'label' => 'mautic.plugin.emailrssimport.rss_url',
-                    'data'  => $data['rss_url'] ?? 'https://feeds.bbci.co.uk/news/rss.xml',
+                    'label' => 'mautic.plugin.emailrssimport.rss_feeds',
+                    'data'  => $data['rss_feeds'] ?? $defaultFeeds,
                     'attr'  => [
                         'class'   => 'form-control',
-                        'tooltip' => 'mautic.plugin.emailrssimport.rss_url.tooltip',
+                        'rows'    => 10,
+                        'tooltip' => 'mautic.plugin.emailrssimport.rss_feeds.tooltip',
+                        'placeholder' => 'Feed Name|https://example.com/rss.xml',
                     ],
                     'required' => false,
+                    'help'     => 'mautic.plugin.emailrssimport.rss_feeds.help',
                 ]
             );
 
