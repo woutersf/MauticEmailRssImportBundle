@@ -4,6 +4,7 @@ namespace MauticPlugin\MauticEmailRssImportBundle\Controller;
 
 use Mautic\CoreBundle\Controller\CommonController;
 use Mautic\PluginBundle\Helper\IntegrationHelper;
+use MauticPlugin\MauticEmailRssImportBundle\Service\RssService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -25,9 +26,46 @@ class RssController extends CommonController
             return new JsonResponse(['error' => 'Integration not active'], 400);
         }
 
-        $rssUrl = $settings['rss_url'] ?? 'https://feeds.bbci.co.uk/news/rss.xml';
+        // Parse available feeds
+        $feeds = $this->parseFeeds($settings);
+
+        // Get requested feed name from request
+        $requestedFeed = $request->query->get('feed');
+
+        // If requesting list of feeds
+        if ($request->query->get('list_feeds')) {
+            return new JsonResponse([
+                'success' => true,
+                'feeds' => array_keys($feeds),
+            ]);
+        }
+
+        // Select the feed URL
+        $rssUrl = null;
+        $feedName = null;
+        if ($requestedFeed && isset($feeds[$requestedFeed])) {
+            $rssUrl = $feeds[$requestedFeed];
+            $feedName = $requestedFeed;
+        } elseif (!empty($feeds)) {
+            // Use first feed if no specific feed requested
+            $feedName = array_key_first($feeds);
+            $rssUrl = $feeds[$feedName];
+        }
+
+        if (empty($rssUrl)) {
+            return new JsonResponse(['error' => 'No RSS feed configured'], 400);
+        }
+
         $rssFields = $settings['rss_fields'] ?? "title\nlink\ndescription\ncategory\npubDate\nmedia";
         $htmlTemplate = $settings['html_template'] ?? '';
+
+        // Check if we should use cached items
+        $useCache = $request->query->get('use_cache', false);
+
+        if ($useCache) {
+            // Fetch from cache (database)
+            return $this->fetchFromCache($feedName, $htmlTemplate);
+        }
 
         // Parse RSS fields
         $fields = array_filter(array_map('trim', explode("\n", $rssFields)));
@@ -101,10 +139,86 @@ class RssController extends CommonController
                 'success' => true,
                 'items' => $items,
                 'template' => $htmlTemplate,
+                'feedName' => $feedName,
             ]);
 
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Exception: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Parse feeds configuration into an array of name => URL
+     *
+     * @param array $settings
+     * @return array
+     */
+    private function parseFeeds(array $settings): array
+    {
+        $feeds = [];
+
+        // Support new multiple feeds format
+        if (!empty($settings['rss_feeds'])) {
+            $lines = array_filter(array_map('trim', explode("\n", $settings['rss_feeds'])));
+            foreach ($lines as $line) {
+                // Format: Feed Name|https://example.com/rss.xml
+                if (strpos($line, '|') !== false) {
+                    [$name, $url] = array_map('trim', explode('|', $line, 2));
+                    if (!empty($name) && !empty($url)) {
+                        $feeds[$name] = $url;
+                    }
+                }
+            }
+        }
+
+        // Backward compatibility: support old single RSS URL field
+        if (empty($feeds) && !empty($settings['rss_url'])) {
+            $feeds['Default Feed'] = $settings['rss_url'];
+        }
+
+        // Fallback to default if nothing configured
+        if (empty($feeds)) {
+            $feeds['BBC News'] = 'https://feeds.bbci.co.uk/news/rss.xml';
+        }
+
+        return $feeds;
+    }
+
+    /**
+     * Fetch RSS items from cache (database)
+     *
+     * @param string $feedName
+     * @param string $htmlTemplate
+     * @return JsonResponse
+     */
+    private function fetchFromCache(string $feedName, string $htmlTemplate): JsonResponse
+    {
+        try {
+            /** @var RssService $rssService */
+            $rssService = $this->get('mautic.emailrssimport.service.rss');
+
+            $items = $rssService->getCachedItems($feedName, 50);
+
+            if (empty($items)) {
+                return new JsonResponse([
+                    'success' => true,
+                    'items' => [],
+                    'template' => $htmlTemplate,
+                    'feedName' => $feedName,
+                    'cached' => true,
+                    'message' => 'No cached items found for this feed',
+                ]);
+            }
+
+            return new JsonResponse([
+                'success' => true,
+                'items' => $items,
+                'template' => $htmlTemplate,
+                'feedName' => $feedName,
+                'cached' => true,
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Exception fetching cached items: ' . $e->getMessage()], 500);
         }
     }
 }

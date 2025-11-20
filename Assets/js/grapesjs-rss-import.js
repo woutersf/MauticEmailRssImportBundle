@@ -11,6 +11,8 @@
     const rssImportPlugin = function(editor, opts = {}) {
         let rssData = null;
         let htmlTemplate = '';
+        let availableFeeds = [];
+        let currentFeedName = '';
 
         // Add command to fetch and show RSS modal
         editor.Commands.add('rss-import', {
@@ -18,11 +20,11 @@
                 showLoadingModal();
 
                 try {
-                    // Use absolute path from root or construct with window.location.origin
-                    const fetchUrl = window.location.origin + '/s/emailrssimport/fetch';
-                    console.log('RSS Import: Fetching from:', fetchUrl);
+                    // First, fetch the list of available feeds
+                    const listUrl = window.location.origin + '/s/emailrssimport/fetch?list_feeds=1';
+                    console.log('RSS Import: Fetching feed list from:', listUrl);
 
-                    const response = await fetch(fetchUrl, {
+                    const listResponse = await fetch(listUrl, {
                         method: 'GET',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
@@ -30,23 +32,62 @@
                         credentials: 'same-origin'
                     });
 
-                    const data = await response.json();
+                    const listData = await listResponse.json();
 
-                    if (data.error) {
-                        alert('Error fetching RSS feed: ' + data.error);
+                    if (listData.error) {
+                        alert('Error fetching feed list: ' + listData.error);
                         closeModal();
                         return;
                     }
 
-                    rssData = data.items;
-                    htmlTemplate = data.template;
-                    showRssModal(data.items, editor);
+                    availableFeeds = listData.feeds || [];
+
+                    // If only one feed, fetch it directly
+                    if (availableFeeds.length === 1) {
+                        await fetchFeed(availableFeeds[0], editor);
+                    } else {
+                        // Show feed selector modal
+                        showFeedSelectorModal(editor);
+                    }
                 } catch (error) {
                     alert('Error: ' + error.message);
                     closeModal();
                 }
             }
         });
+
+        async function fetchFeed(feedName, editor) {
+            showLoadingModal();
+
+            try {
+                const fetchUrl = window.location.origin + '/s/emailrssimport/fetch?feed=' + encodeURIComponent(feedName);
+                console.log('RSS Import: Fetching feed:', feedName, 'from:', fetchUrl);
+
+                const response = await fetch(fetchUrl, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error fetching RSS feed: ' + data.error);
+                    closeModal();
+                    return;
+                }
+
+                rssData = data.items;
+                htmlTemplate = data.template;
+                currentFeedName = data.feedName || feedName;
+                showRssModal(data.items, editor);
+            } catch (error) {
+                alert('Error: ' + error.message);
+                closeModal();
+            }
+        }
 
         // Define a custom component type for RSS import placeholder
         editor.DomComponents.addType('rss-import-placeholder', {
@@ -92,6 +133,58 @@
             }
         });
 
+        function showFeedSelectorModal(editor) {
+            const feedOptions = availableFeeds.map(function(feedName) {
+                return `<option value="${feedName}">${feedName}</option>`;
+            }).join('');
+
+            const modalHtml = `
+                <div class="modal fade in" id="rss-import-modal" style="display: block; z-index: 10000;">
+                    <div class="modal-backdrop fade in" style="z-index: 9999;"></div>
+                    <div class="modal-dialog" style="z-index: 10001;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" id="feed-selector-close-btn">
+                                    <span>&times;</span>
+                                </button>
+                                <h4 class="modal-title">Select RSS Feed</h4>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="feed-selector">Choose an RSS feed to import:</label>
+                                    <select class="form-control" id="feed-selector">
+                                        ${feedOptions}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" id="feed-selector-cancel-btn">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="feed-selector-load-btn">Load Feed</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove any existing modal first
+            const existingModal = document.getElementById('rss-import-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modalContainer = document.createElement('div');
+            modalContainer.innerHTML = modalHtml;
+            document.body.appendChild(modalContainer.firstElementChild);
+
+            // Attach event listeners
+            document.getElementById('feed-selector-close-btn').addEventListener('click', closeModal);
+            document.getElementById('feed-selector-cancel-btn').addEventListener('click', closeModal);
+            document.getElementById('feed-selector-load-btn').addEventListener('click', function() {
+                const selectedFeed = document.getElementById('feed-selector').value;
+                fetchFeed(selectedFeed, editor);
+            });
+        }
+
         function showLoadingModal() {
             const modalHtml = `
                 <div class="modal fade in" id="rss-import-modal" style="display: block; z-index: 10000;">
@@ -114,6 +207,12 @@
                     </div>
                 </div>
             `;
+
+            // Remove any existing modal first
+            const existingModal = document.getElementById('rss-import-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
 
             const modalContainer = document.createElement('div');
             modalContainer.innerHTML = modalHtml;
@@ -158,6 +257,7 @@
                 `;
             }).join('');
 
+            const feedTitle = currentFeedName ? ' - ' + currentFeedName : '';
             const modalHtml = `
                 <div class="modal fade in" id="rss-import-modal" style="display: block; z-index: 10000;">
                     <div class="modal-backdrop fade in" style="z-index: 9999;"></div>
@@ -167,7 +267,7 @@
                                 <button type="button" class="close" id="modal-close-btn">
                                     <span>&times;</span>
                                 </button>
-                                <h4 class="modal-title">Select RSS Items to Import</h4>
+                                <h4 class="modal-title">Select RSS Items to Import${feedTitle}</h4>
                             </div>
                             <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
                                 <div class="mb-3">
