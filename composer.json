@@ -1,5 +1,5 @@
 {
-    "name": "mautic/email-rss-import-bundle",
+    "name": "woutersf/email-rss-import-bundle",
     "description": "Import RSS feed items into Mautic email builder with customizable MJML templates",
     "type": "mautic-plugin",
     "license": "GPL-3.0-or-later",
