@@ -5,10 +5,12 @@ A powerful Mautic plugin that seamlessly integrates RSS feed content into your e
 ## Features
 
 - 🎯 **GrapesJS Integration** - Native block in the GrapesJS builder for easy content import
-- 📰 **RSS Feed Support** - Import content from any RSS feed
+- 📰 **Multiple RSS Feed Support** - Configure and import from multiple RSS feeds
+- 🤖 **Daily Automation** - Automatically fetch RSS feeds daily via cron
+- 💾 **Caching** - Store RSS items in database for faster access and offline availability
 - 🎨 **Customizable Templates** - Define your own MJML templates with token support
 - ✅ **Multi-Selection** - Select multiple RSS items at once
-- 🔧 **Flexible Configuration** - Configure RSS URL, fields, and templates per installation
+- 🔧 **Flexible Configuration** - Configure RSS feeds, fields, and templates per installation
 - 🚀 **No Core Modifications** - Clean extension using Mautic's plugin system
 
 ## Screenshots
@@ -91,10 +93,19 @@ php bin/console cache:clear
 
 Navigate to **Settings → Plugins → Email RSS Import** to configure:
 
-### RSS URL
-Enter the URL of the RSS feed you want to import from.
+### RSS Feeds (Multiple Feeds Support)
+Define multiple RSS feeds with names, one per line in the format: `Feed Name|URL`
 
-**Default**: `https://feeds.bbci.co.uk/news/rss.xml`
+**Format**: `Feed Name|https://example.com/rss.xml`
+
+**Example**:
+```
+BBC News|https://feeds.bbci.co.uk/news/rss.xml
+TechCrunch|https://techcrunch.com/feed/
+CNN Top Stories|http://rss.cnn.com/rss/cnn_topstories.rss
+```
+
+When using the GrapesJS block, you'll be able to select which feed to import from.
 
 ### RSS Fields
 Define which fields to extract from the RSS feed (one per line).
@@ -155,6 +166,77 @@ Define the MJML template for each RSS item. Use tokens to insert RSS field value
    - Each item will be formatted according to your template
    - Items are inserted in chronological order from the feed
 
+## Daily Automation
+
+The plugin can automatically fetch RSS feeds on a daily basis and store them in the database for faster access and offline availability.
+
+### Automatic Fetching (via Mautic Cron)
+
+The plugin automatically hooks into Mautic's maintenance cron job. When Mautic's cron runs, it will:
+- Fetch all configured RSS feeds
+- Store new items in the database
+- Skip duplicate items (based on GUID/link)
+- Clean up items older than 30 days
+
+**Setup Mautic Cron** (if not already configured):
+```bash
+# Add to your crontab
+*/5 * * * * php /path/to/mautic/bin/console mautic:segments:update
+*/5 * * * * php /path/to/mautic/bin/console mautic:campaigns:trigger
+*/5 * * * * php /path/to/mautic/bin/console mautic:campaigns:rebuild
+0 2 * * * php /path/to/mautic/bin/console mautic:maintenance:cleanup --days-old=365
+```
+
+The RSS fetching will run during the `mautic:maintenance:cleanup` command.
+
+### Manual Fetching (via CLI)
+
+You can also manually fetch RSS feeds using the command line:
+
+```bash
+# Fetch all configured RSS feeds
+php bin/console mautic:rss:fetch
+
+# Fetch and clean up items older than 60 days
+php bin/console mautic:rss:fetch --cleanup=60
+```
+
+**Command Options:**
+- `--cleanup=X` - Clean up items older than X days (default: 30)
+
+**Command Output Example:**
+```
+RSS Feed Fetcher
+================
+
+Configured Feeds
+----------------
+ * BBC News: https://feeds.bbci.co.uk/news/rss.xml
+ * TechCrunch: https://techcrunch.com/feed/
+
+Fetching Feeds
+--------------
+Fetching 'BBC News'... ✓ 15 added, 5 skipped
+Fetching 'TechCrunch'... ✓ 12 added, 8 skipped
+
+Summary
+-------
+[OK] Total items added: 27
+
+Total items skipped: 13
+
+Cleanup
+-------
+Removing items older than 30 days... ✓ 145 items deleted
+```
+
+### Using Cached Items
+
+When RSS items are cached in the database, you can use them in the GrapesJS builder. The plugin will automatically use the latest cached items, which provides:
+- **Faster loading** - No need to fetch from external RSS feeds
+- **Offline availability** - Works even if the RSS feed is temporarily unavailable
+- **Consistent content** - All users see the same cached content
+
 ## How It Works
 
 1. **Extension System**: The plugin registers itself with GrapesJS using Mautic's `window.MauticGrapesJsPlugins` extension system
@@ -167,10 +249,17 @@ Define the MJML template for each RSS item. Use tokens to insert RSS field value
 
 ### Architecture
 
-- **Backend Controller**: `RssController.php` - Fetches and parses RSS feeds
+- **Backend Controller**: `RssController.php` - Fetches and parses RSS feeds (with cache support)
 - **Integration Class**: `EmailRssImportIntegration.php` - Handles plugin configuration
 - **Frontend Extension**: `grapesjs-rss-import.js` - GrapesJS block and modal functionality
-- **Event Subscriber**: `AssetSubscriber.php` - Injects JavaScript assets
+- **Event Subscribers**:
+  - `AssetSubscriber.php` - Injects JavaScript assets
+  - `CronSubscriber.php` - Handles daily automatic RSS fetching
+- **Service Layer**: `RssService.php` - Business logic for fetching and storing RSS items
+- **Entity Layer**:
+  - `RssItem.php` - Database entity for cached RSS items
+  - `RssItemRepository.php` - Repository for querying RSS items
+- **Command**: `FetchRssCommand.php` - CLI command for manual RSS fetching
 
 ### Supported RSS Formats
 
@@ -221,20 +310,29 @@ MauticEmailRssImportBundle/
 │   │   └── rss-icon.png
 │   └── js/
 │       └── grapesjs-rss-import.js
+├── Command/
+│   └── FetchRssCommand.php
 ├── Config/
 │   └── config.php
 ├── Controller/
 │   └── RssController.php
+├── Entity/
+│   ├── RssItem.php
+│   └── RssItemRepository.php
 ├── EventListener/
-│   └── AssetSubscriber.php
+│   ├── AssetSubscriber.php
+│   └── CronSubscriber.php
 ├── Integration/
 │   └── EmailRssImportIntegration.php
 ├── Resources/
 │   └── views/
+├── Service/
+│   └── RssService.php
 ├── Translations/
 │   └── en_US/
 │       └── messages.ini
 ├── MauticEmailRssImportBundle.php
+├── composer.json
 └── README.md
 ```
 
@@ -304,6 +402,16 @@ git push && git push --tags
 Packagist will automatically detect the new tag and update the package.
 
 ## Changelog
+
+### Version 2.0.0
+- **Multiple RSS Feeds Support** - Configure and use multiple RSS feeds with names
+- **Daily Automation** - Automatic RSS fetching via cron integration
+- **Database Caching** - Store RSS items in database for faster access
+- **CLI Command** - Manual RSS fetching via `mautic:rss:fetch` command
+- **Feed Selector** - Choose which feed to import in GrapesJS
+- **Automatic Cleanup** - Remove old RSS items automatically
+- **Enhanced Architecture** - Added Service layer, Entity layer, and Repository pattern
+- **Backward Compatibility** - Maintains support for single RSS URL configuration
 
 ### Version 1.0.0
 - Initial release
