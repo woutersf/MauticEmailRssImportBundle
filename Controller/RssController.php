@@ -9,10 +9,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 class RssController extends CommonController
 {
-    public function fetchAction(Request $request): JsonResponse
+    public function fetchAction(Request $request, IntegrationHelper $integrationHelper): JsonResponse
     {
-        /** @var IntegrationHelper $integrationHelper */
-        $integrationHelper = $this->factory->getHelper('integration');
         $integration = $integrationHelper->getIntegrationObject('EmailRssImport');
 
         if (!$integration || !$integration->getIntegrationSettings()->getIsPublished()) {
